@@ -23,8 +23,8 @@
   "homepage": "https://github.com/0ju1c3/slop-cop#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "zod": "^3.25.76",
-    "compromise": "^14.15.0"
+    "compromise": "^14.15.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^25.6.2",
