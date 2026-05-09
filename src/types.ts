@@ -10,15 +10,11 @@ export interface ViolationRule {
   name: string
   category: ViolationCategory
   description: string
-  tip: string          // actionable advice shown in popover
-  canRemove: boolean   // whether "Remove" deletes the matched text
-  color: string        // CSS hsl or hex
-  bgColor: string      // highlight background
+  tip: string
   requiresLLM: boolean
-  llmTier?: 'sentence' | 'document'   // which LLM call detects this rule
-  llmDetectionHint?: string           // detection description used in LLM analysis prompts
-  rewriteHint?: string                // human-readable description shown in rewrite debug panel
-  llmDirective?: string               // terse imperative sent to the model in rewrite prompts
+  llmTier?: 'sentence' | 'document'
+  llmDetectionHint?: string
+  llmDirective?: string
 }
 
 export interface Violation {
@@ -27,7 +23,7 @@ export interface Violation {
   endIndex: number
   matchedText: string
   explanation?: string
-  suggestedChange?: string | null  // null = explicitly no action (don't fall back to canRemove deletion)
+  suggestedChange?: string | null  // null = explicitly no action (no replacement)
   applyStartIndex?: number
   applyEndIndex?: number
   applyReplacement?: string
