@@ -258,9 +258,6 @@ export function detectConnectorAddiction(text: string): Violation[] {
         endIndex: highlightEnd,
         matchedText: text.slice(highlightStart, highlightEnd),
         suggestedChange: '',
-        applyStartIndex: m.index,
-        applyEndIndex: m.index + fullMatch.length,
-        applyReplacement: boundary + nextChar.toUpperCase(),
       })
     }
   }
