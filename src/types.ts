@@ -24,7 +24,4 @@ export interface Violation {
   matchedText: string
   explanation?: string
   suggestedChange?: string | null  // null = explicitly no action (no replacement)
-  applyStartIndex?: number
-  applyEndIndex?: number
-  applyReplacement?: string
 }
