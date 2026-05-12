@@ -10,8 +10,6 @@ const server = new McpServer({
   version: "1.0.0",
 });
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
-
 function enrichViolations(violations: Violation[]) {
   return violations.map(v => ({
     ...v,
@@ -63,7 +61,6 @@ function splitParagraphs(text: string): Array<{ text: string; start: number; end
 }
 
 async function sample(systemPrompt: string, userPrompt: string, maxTokens = 4096): Promise<string> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const response = await (server as any).server.createMessage({
     messages: [{ role: 'user', content: { type: 'text', text: userPrompt } }],
     systemPrompt,
@@ -72,8 +69,6 @@ async function sample(systemPrompt: string, userPrompt: string, maxTokens = 4096
   if (response.content.type !== 'text') return ''
   return response.content.text
 }
-
-// ── Tool: detect_slop ─────────────────────────────────────────────────────────
 
 server.registerTool(
   "detect_slop",
@@ -96,8 +91,6 @@ server.registerTool(
     }
   },
 )
-
-// ── Tool: detect_slop_full ────────────────────────────────────────────────────
 
 server.registerTool(
   "detect_slop_full",
@@ -137,7 +130,7 @@ server.registerTool(
         }
       }
     } catch {
-      // Sampling failed — return client-side results only
+      //TODO: Handle this error
     }
 
     const all = enrichViolations([...clientViolations, ...llmViolations])
@@ -151,8 +144,6 @@ server.registerTool(
     }
   },
 )
-
-// ── Tool: fix_slop ────────────────────────────────────────────────────────────
 
 server.registerTool(
   "fix_slop",
@@ -209,8 +200,6 @@ server.registerTool(
     }
   },
 )
-
-// ── Start ──────────────────────────────────────────────────────────────────────
 
 async function main() {
   const transport = new StdioServerTransport();
