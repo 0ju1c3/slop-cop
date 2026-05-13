@@ -1,6 +1,6 @@
 {
   "name": "@0ju1c3/slop-cop",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "MCP server that detects and fixes LLM prose patterns (slop) in text",
   "keywords": [
     "mcp",
