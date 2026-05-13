@@ -1,5 +1,5 @@
 /**
- * NLP-assisted detectors using compromise for context-sensitive slop words —
+ * NLP-assisted detectors using compromise for context-sensitive slop words,
  * cases where simple word matching produces too many false positives.
  *
  * Performance: a trigger-word pre-filter (fast regex) identifies sentences that
@@ -378,8 +378,8 @@ export function detectTripleConstruction(text: string): Violation[] {
   // title phrase describing A rather than a parallel list item.
   //
   // The only reliable surface signal available in compromise/two is #ProperNoun:
-  // if A ends with a proper noun and B does NOT start with one, B is almost
-  // certainly an appositive of A. We suppress those cases.
+  // if A ends with a proper noun and B does NOT start with one, B is likely
+  // an appositive of A. We suppress those cases.
   //
   // Known limitation — common-noun appositives are NOT suppressed:
   //   "Fermentation, a necessary step in brewing, and aging both take time."
