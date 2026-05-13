@@ -313,7 +313,7 @@ server.registerTool(
         fixed.slice(v.endIndex)
     }
 
-    // Clean up splice artifacts: collapse double spaces, trim space before punctuation
+    // Clean up splice artifacts
     fixed = fixed.replace(/[ \t]{2,}/g, ' ').replace(/ ([.,;:!?])/g, '$1')
 
     // ── Phase 2: LLM rewrite for what remains ────────────────────────────────
