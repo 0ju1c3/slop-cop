@@ -8,8 +8,8 @@
  * may run on 5–10 sentences instead of thousands of words.
  */
 
-import nlp from './nlp-instance.js'
 import type { Violation } from '../types.js'
+import nlp from './nlp-instance.js'
 import { VERB_INTENSIFIERS } from './word-patterns.js'
 
 // compromise .json({offset:true, tags:true}) shapes
@@ -24,30 +24,46 @@ interface MatchJson {
   terms: TermJson[]
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type NlpDoc = any
+// Minimal interface for the compromise document API used in this file.
+// compromise's own TypeScript types are incomplete for our usage patterns
+// (e.g. .json({tags:true}), callback types in .forEach), so we describe
+// exactly the surface we depend on rather than importing the full type.
+interface NlpDoc {
+  match(pattern: string): NlpDoc
+  forEach(fn: (match: NlpDoc) => void): void
+  json(opts?: { offset?: boolean; tags?: boolean }): MatchJson[]
+  verbs(): NlpDoc
+  conjugate(): Array<Record<string, string>>
+  adjectives(): NlpDoc
+  toAdverb(): NlpDoc
+  text(): string
+  has(pattern: string): boolean
+  terms(): NlpDoc
+  last(): NlpDoc
+  eq(n: number): NlpDoc
+}
 
 // Simpler synonyms to suggest when flagging a slop verb, keyed by stem.
 // undefined = no suggestion (verb is too context-dependent to auto-replace)
 const VERB_REPLACEMENTS: Record<string, string | undefined> = {
-  showcase:   'show',
-  boast:      'have',
+  showcase: 'show',
+  boast: 'have',
   // Moved from INTENSIFIERS — verb deletion breaks sentences
-  leverage:   'use',
-  harness:    'use',
-  foster:     'build',
+  leverage: 'use',
+  harness: 'use',
+  foster: 'build',
   underscore: 'show',
-  navigate:   'handle',
+  navigate: 'handle',
   streamline: 'simplify',
-  spearhead:  'lead',
-  craft:      'make',
-  bolster:    'support',
-  emphasize:  'stress',
-  enhance:    'improve',
-  garner:     'get',
-  delve:      undefined,  // "delve into" → no clean single-word swap
-  embark:     undefined,  // "embark on" → no clean single-word swap
-  resonate:   undefined,  // too context-dependent
+  spearhead: 'lead',
+  craft: 'make',
+  bolster: 'support',
+  emphasize: 'stress',
+  enhance: 'improve',
+  garner: 'get',
+  delve: undefined, // "delve into" → no clean single-word swap
+  embark: undefined, // "embark on" → no clean single-word swap
+  resonate: undefined, // too context-dependent
 }
 
 // Strip trailing 'e' from a verb stem so the prefix matches all conjugated forms.
@@ -70,7 +86,11 @@ const TRIGGER_STEMS = [
   ...['highlight', 'showcase', 'boast', 'craft'].map(toStemPrefix),
   ...VERB_INTENSIFIERS.map(toStemPrefix),
   // "in a [adj] way/manner/sense" phrase detector (exact words, no conjugation)
-  'way', 'manner', 'sense', 'fashion', 'regard',
+  'way',
+  'manner',
+  'sense',
+  'fashion',
+  'regard',
 ]
 
 // Single fast regex used to pre-filter text before any NLP work
@@ -80,29 +100,34 @@ const TRIGGER_RE = new RegExp(`\\b(${TRIGGER_STEMS.join('|')})`, 'i')
  * Given a character position in text, return the containing sentence —
  * the run of text bounded by .!?\n or document edges — with its start offset.
  */
-function extractSentenceAt(text: string, pos: number): { text: string; offset: number } {
+function extractSentenceAt(
+  text: string,
+  pos: number,
+): { text: string; offset: number } {
   let start = pos
   while (start > 0 && !/[.!?\n]/.test(text[start - 1])) start--
-  while (start < pos && /\s/.test(text[start])) start++  // skip leading whitespace
+  while (start < pos && /\s/.test(text[start])) start++ // skip leading whitespace
 
   let end = pos
   while (end < text.length && !/[.!?\n]/.test(text[end])) end++
-  if (end < text.length) end++  // include the terminating punctuation/newline
+  if (end < text.length) end++ // include the terminating punctuation/newline
 
   return { text: text.slice(start, end), offset: start }
 }
 
 /** Conjugate baseVerb to match the tense tags of a detected verb term */
 function conjugate(baseVerb: string, tags: string[]): string {
-  const conj = nlp(baseVerb).verbs().conjugate()[0] as Record<string, string> | undefined
+  const conj = nlp(baseVerb).verbs().conjugate()[0] as
+    | Record<string, string>
+    | undefined
   if (!conj) return baseVerb
-  if (tags.includes('Gerund'))       return conj['Gerund']       ?? baseVerb
-  if (tags.includes('PastTense'))    return conj['PastTense']    ?? baseVerb
+  if (tags.includes('Gerund')) return conj.Gerund ?? baseVerb
+  if (tags.includes('PastTense')) return conj.PastTense ?? baseVerb
   // Infinitive must be checked before PresentTense — compromise tags both as PresentTense,
   // but adds Infinitive only for "to verb" / base form (not 3rd-person singular "verbs")
-  if (tags.includes('Infinitive'))   return conj['Infinitive']   ?? baseVerb
-  if (tags.includes('PresentTense')) return conj['PresentTense'] ?? baseVerb
-  return conj['Infinitive'] ?? baseVerb
+  if (tags.includes('Infinitive')) return conj.Infinitive ?? baseVerb
+  if (tags.includes('PresentTense')) return conj.PresentTense ?? baseVerb
+  return conj.Infinitive ?? baseVerb
 }
 
 /**
@@ -110,7 +135,11 @@ function conjugate(baseVerb: string, tags: string[]): string {
  * e.g. "key #Noun" → flags only "key", not "key challenge"
  * No suggestedChange — deletion of an adjective is usually safe.
  */
-function firstTermViolations(doc: NlpDoc, pattern: string, ruleId: string): Violation[] {
+function firstTermViolations(
+  doc: NlpDoc,
+  pattern: string,
+  ruleId: string,
+): Violation[] {
   const violations: Violation[] = []
   doc.match(pattern).forEach((m: NlpDoc) => {
     const matches = m.json({ offset: true }) as MatchJson[]
@@ -118,7 +147,12 @@ function firstTermViolations(doc: NlpDoc, pattern: string, ruleId: string): Viol
     const term = matches[0].terms?.[0]
     if (!term?.offset) return
     const { start, length } = term.offset
-    violations.push({ ruleId, startIndex: start, endIndex: start + length, matchedText: term.text })
+    violations.push({
+      ruleId,
+      startIndex: start,
+      endIndex: start + length,
+      matchedText: term.text,
+    })
   })
   return violations
 }
@@ -134,10 +168,10 @@ function toAdverb(adj: string): string {
   if (result) return result
   // Fallback suffix rules for words compromise doesn't tag as adjectives in isolation
   const lower = adj.toLowerCase()
-  if (lower.endsWith('ic')) return adj + 'ally'
-  if (lower.endsWith('le')) return adj.slice(0, -1) + 'y'
-  if (lower.endsWith('y') && lower.length > 2) return adj.slice(0, -1) + 'ily'
-  return adj + 'ly'
+  if (lower.endsWith('ic')) return `${adj}ally`
+  if (lower.endsWith('le')) return `${adj.slice(0, -1)}y`
+  if (lower.endsWith('y') && lower.length > 2) return `${adj.slice(0, -1)}ily`
+  return `${adj}ly`
 }
 
 /**
@@ -151,9 +185,15 @@ function toAdverb(adj: string): string {
  * already tags each term with tense (Gerund, PastTense, Infinitive, PresentTense),
  * so we get the tense info we need without the chunk-level machinery.
  */
-function verbViolations(doc: NlpDoc, stem: RegExp, ruleId: string): Violation[] {
+function verbViolations(
+  doc: NlpDoc,
+  stem: RegExp,
+  ruleId: string,
+): Violation[] {
   const violations: Violation[] = []
-  const json = doc.match('#Verb').json({ offset: true, tags: true }) as MatchJson[]
+  const json = doc
+    .match('#Verb')
+    .json({ offset: true, tags: true }) as MatchJson[]
   for (const phrase of json) {
     // Each phrase is a single term when matching #Verb (not a chunk)
     const term = phrase.terms?.[0]
@@ -161,10 +201,14 @@ function verbViolations(doc: NlpDoc, stem: RegExp, ruleId: string): Violation[] 
     if (!stem.test(term.text)) continue
     const { start, length } = term.offset
     // Find the base replacement and conjugate to match the detected tense
-    const base = Object.keys(VERB_REPLACEMENTS).find(k => term.text.toLowerCase().startsWith(toStemPrefix(k)))
+    const base = Object.keys(VERB_REPLACEMENTS).find((k) =>
+      term.text.toLowerCase().startsWith(toStemPrefix(k)),
+    )
     const baseReplacement = base ? VERB_REPLACEMENTS[base] : undefined
     // null = explicitly no action (verb with no clean synonym — deletion would break the sentence)
-    const suggestedChange = baseReplacement ? conjugate(baseReplacement, term.tags) : null
+    const suggestedChange = baseReplacement
+      ? conjugate(baseReplacement, term.tags)
+      : null
     violations.push({
       ruleId,
       startIndex: start,
@@ -181,30 +225,38 @@ function verbViolations(doc: NlpDoc, stem: RegExp, ruleId: string): Violation[] 
  * Flags the WHOLE phrase and suggests collapsing to an adverb
  * (e.g. "in a crucial way" → "crucially").
  */
-function inAWayViolations(doc: NlpDoc, _chunkText: string, ruleId: string): Violation[] {
+function inAWayViolations(
+  doc: NlpDoc,
+  _chunkText: string,
+  ruleId: string,
+): Violation[] {
   const violations: Violation[] = []
-  doc.match('in (a|an) #Adjective (way|manner|sense|fashion|regard)').forEach((m: NlpDoc) => {
-    const matches = m.json({ offset: true, tags: true }) as MatchJson[]
-    if (!matches.length) return
-    const phrase = matches[0]
-    if (!phrase.offset) return
-    const { start, length } = phrase.offset
-    const adjTerm = (phrase.terms ?? []).find((t: TermJson) => t.tags.includes('Adjective'))
-    if (!adjTerm) return
-    // compromise's phrase offset already includes trailing punctuation in `length`
-    // (e.g. "in a crucial way." has length=17, spanning the period).
-    // Check phrase.text's last character — NOT chunkText[start+length] which is
-    // always the character AFTER the match (undefined at sentence end).
-    const lastChar = phrase.text.slice(-1)
-    const punct = /[.!?,;:]/.test(lastChar) ? lastChar : ''
-    violations.push({
-      ruleId,
-      startIndex: start,
-      endIndex: start + length,  // already includes punct
-      matchedText: phrase.text,  // already includes punct
-      suggestedChange: toAdverb(adjTerm.text) + punct,
+  doc
+    .match('in (a|an) #Adjective (way|manner|sense|fashion|regard)')
+    .forEach((m: NlpDoc) => {
+      const matches = m.json({ offset: true, tags: true }) as MatchJson[]
+      if (!matches.length) return
+      const phrase = matches[0]
+      if (!phrase.offset) return
+      const { start, length } = phrase.offset
+      const adjTerm = (phrase.terms ?? []).find((t: TermJson) =>
+        t.tags.includes('Adjective'),
+      )
+      if (!adjTerm) return
+      // compromise's phrase offset already includes trailing punctuation in `length`
+      // (e.g. "in a crucial way." has length=17, spanning the period).
+      // Check phrase.text's last character — NOT chunkText[start+length] which is
+      // always the character AFTER the match (undefined at sentence end).
+      const lastChar = phrase.text.slice(-1)
+      const punct = /[.!?,;:]/.test(lastChar) ? lastChar : ''
+      violations.push({
+        ruleId,
+        startIndex: start,
+        endIndex: start + length, // already includes punct
+        matchedText: phrase.text, // already includes punct
+        suggestedChange: toAdverb(adjTerm.text) + punct,
+      })
     })
-  })
   return violations
 }
 
@@ -231,16 +283,17 @@ const OVERUSED_VERB_RE = new RegExp(
 // Deduplication in index.ts ensures no double-flagging when both paths fire.
 
 function addS(verb: string): string {
-  if (verb === 'have') return 'has'   // irregular: boast → have → has
-  if (verb.endsWith('y') && !/[aeiou]y$/i.test(verb)) return verb.slice(0, -1) + 'ies'
-  if (/([sxz]|[sc]h)$/i.test(verb)) return verb + 'es'
-  return verb + 's'
+  if (verb === 'have') return 'has' // irregular: boast → have → has
+  if (verb.endsWith('y') && !/[aeiou]y$/i.test(verb))
+    return `${verb.slice(0, -1)}ies`
+  if (/([sxz]|[sc]h)$/i.test(verb)) return `${verb}es`
+  return `${verb}s`
 }
 
 function addIng(verb: string): string {
-  if (verb === 'get') return 'getting'  // irregular: garner → get → getting
-  if (verb.endsWith('e')) return verb.slice(0, -1) + 'ing'
-  return verb + 'ing'
+  if (verb === 'get') return 'getting' // irregular: garner → get → getting
+  if (verb.endsWith('e')) return `${verb.slice(0, -1)}ing`
+  return `${verb}ing`
 }
 
 /**
@@ -251,11 +304,14 @@ export function detectVerbIntensifierForms(text: string): Violation[] {
   const violations: Violation[] = []
   for (const stem of OVERUSED_VERB_STEMS) {
     const replacement = VERB_REPLACEMENTS[stem]
-    if (replacement === undefined) continue  // no clean swap (delve, embark, resonate)
+    if (replacement === undefined) continue // no clean swap (delve, embark, resonate)
     const prefix = toStemPrefix(stem)
-    const sForm = stem.endsWith('e') ? prefix + 'es' : prefix + 's'
-    const ingForm = prefix + 'ing'
-    for (const [form, suggestion] of [[sForm, addS(replacement)], [ingForm, addIng(replacement)]] as [string, string][]) {
+    const sForm = stem.endsWith('e') ? `${prefix}es` : `${prefix}s`
+    const ingForm = `${prefix}ing`
+    for (const [form, suggestion] of [
+      [sForm, addS(replacement)],
+      [ingForm, addIng(replacement)],
+    ] as [string, string][]) {
       const re = new RegExp(`\\b${form}\\b`, 'gi')
       let m: RegExpExecArray | null
       while ((m = re.exec(text)) !== null) {
@@ -299,9 +355,15 @@ export function detectContextualSlop(text: string): Violation[] {
   // Run NLP only on triggered sentences, then offset results back to document positions
   const violations: Violation[] = []
   for (const { text: chunk, offset } of windows.values()) {
-    const doc = nlp(chunk)
+    // nlp-instance.ts extends the base with verbs+adjectives plugins at runtime,
+    // adding .conjugate() and .toAdverb() — not reflected in the static type.
+    const doc = nlp(chunk) as unknown as NlpDoc
     for (const v of runNlpDetectors(doc, chunk)) {
-      violations.push({ ...v, startIndex: v.startIndex + offset, endIndex: v.endIndex + offset })
+      violations.push({
+        ...v,
+        startIndex: v.startIndex + offset,
+        endIndex: v.endIndex + offset,
+      })
     }
   }
   return violations
@@ -322,7 +384,10 @@ export function detectShortHookParagraph(text: string): Violation[] {
   let pos = 0
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i]
-    if (i % 2 === 1) { pos += part.length; continue }  // separator
+    if (i % 2 === 1) {
+      pos += part.length
+      continue
+    } // separator
     const para = part
     const paraOffset = pos
     pos += para.length
@@ -333,7 +398,10 @@ export function detectShortHookParagraph(text: string): Violation[] {
     // Split on sentence-ending punctuation followed by whitespace + capital letter.
     // compromise/two doesn't include the sentences plugin; a regex split is
     // sufficient here since we only need sentence count and word counts.
-    const sentences = para.split(/(?<=[.!?])\s+(?=[A-Z"'])/).map(s => s.trim()).filter(Boolean)
+    const sentences = para
+      .split(/(?<=[.!?])\s+(?=[A-Z"'])/)
+      .map((s) => s.trim())
+      .filter(Boolean)
     if (sentences.length < 3) continue
 
     const wordCount = (s: string) => s.trim().split(/\s+/).length
@@ -357,7 +425,6 @@ export function detectShortHookParagraph(text: string): Violation[] {
 }
 
 // ── Triple construction ───────────────────────────────────────────────────────
-
 
 export function detectTripleConstruction(text: string): Violation[] {
   if (!text.includes(',')) return []
@@ -393,10 +460,10 @@ export function detectTripleConstruction(text: string): Violation[] {
   // The "x " prefix ensures the real first word is never at index 0, which would
   // bypass compromise/two's second-pass title-case ProperNoun tagger.
   function endsWithProperNoun(t: string): boolean {
-    return nlp('x ' + t.trim()).terms().last().has('#ProperNoun')
+    return nlp(`x ${t.trim()}`).terms().last().has('#ProperNoun')
   }
   function startsWithProperNoun(t: string): boolean {
-    return nlp('x ' + t.trim()).terms().eq(1).has('#ProperNoun')
+    return nlp(`x ${t.trim()}`).terms().eq(1).has('#ProperNoun')
   }
 
   const violations: Violation[] = []
@@ -405,7 +472,8 @@ export function detectTripleConstruction(text: string): Violation[] {
 
     // Relative/subordinate clause openers — these are never list items.
     // Also covers "and as reported/stated/noted" (C starting with "as").
-    const CLAUSE_OPENER = /^(?:which|that|who|whom|whose|where|when|because|although|since|though|while|as)\b/i
+    const CLAUSE_OPENER =
+      /^(?:which|that|who|whom|whose|where|when|because|although|since|though|while|as)\b/i
 
     // "A, B, and C" — Oxford comma form; all items up to 70 chars
     // Guard: skip if B or C starts with a clause opener
@@ -413,20 +481,40 @@ export function detectTripleConstruction(text: string): Violation[] {
     // Also skip if A ends with a proper noun but B does NOT start with one —
     // that pattern indicates B is an appositive title of A, not a parallel item.
     // (e.g. "Dave Burwick, former CEO of Boston Beer, and Frank Luntz")
-    const oxfordRe = /([^,\n]{3,70}),\s+([^,\n]{3,70}),\s+(?:and|or)\s+([^,.!?\n]{3,70})/gi
+    const oxfordRe =
+      /([^,\n]{3,70}),\s+([^,\n]{3,70}),\s+(?:and|or)\s+([^,.!?\n]{3,70})/gi
     while ((m = oxfordRe.exec(chunk)) !== null) {
-      if (CLAUSE_OPENER.test(m[2].trimStart()) || CLAUSE_OPENER.test(m[3].trimStart())) continue
-      if (endsWithProperNoun(m[1]) && !startsWithProperNoun(m[2])) continue  // named-entity appositive
-      violations.push({ ruleId: 'triple-construction', startIndex: offset + m.index, endIndex: offset + m.index + m[0].length, matchedText: m[0] })
+      if (
+        CLAUSE_OPENER.test(m[2].trimStart()) ||
+        CLAUSE_OPENER.test(m[3].trimStart())
+      )
+        continue
+      if (endsWithProperNoun(m[1]) && !startsWithProperNoun(m[2])) continue // named-entity appositive
+      violations.push({
+        ruleId: 'triple-construction',
+        startIndex: offset + m.index,
+        endIndex: offset + m.index + m[0].length,
+        matchedText: m[0],
+      })
     }
 
     // "A, B and C" — no Oxford comma; B must be short (1–3 words) to avoid matching
     // clause-internal "and" like "you absorb morale damage and replacement costs"
     // Guard: skip if B or C starts with a clause opener
-    const noOxfordRe = /([^,\n]{3,70}),\s+([\w-]+(?:\s+[\w-]+){0,2})\s+(?:and|or)\s+([^,.!?\n]{3,70})/gi
+    const noOxfordRe =
+      /([^,\n]{3,70}),\s+([\w-]+(?:\s+[\w-]+){0,2})\s+(?:and|or)\s+([^,.!?\n]{3,70})/gi
     while ((m = noOxfordRe.exec(chunk)) !== null) {
-      if (CLAUSE_OPENER.test(m[2].trimStart()) || CLAUSE_OPENER.test(m[3].trimStart())) continue
-      violations.push({ ruleId: 'triple-construction', startIndex: offset + m.index, endIndex: offset + m.index + m[0].length, matchedText: m[0] })
+      if (
+        CLAUSE_OPENER.test(m[2].trimStart()) ||
+        CLAUSE_OPENER.test(m[3].trimStart())
+      )
+        continue
+      violations.push({
+        ruleId: 'triple-construction',
+        startIndex: offset + m.index,
+        endIndex: offset + m.index + m[0].length,
+        matchedText: m[0],
+      })
     }
   }
   return violations

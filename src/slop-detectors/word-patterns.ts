@@ -4,7 +4,10 @@ import type { Violation } from '../types.js'
 function findAll(text: string, pattern: RegExp, ruleId: string): Violation[] {
   const violations: Violation[] = []
   let m: RegExpExecArray | null
-  const re = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : pattern.flags + 'g')
+  const re = new RegExp(
+    pattern.source,
+    pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`,
+  )
   while ((m = re.exec(text)) !== null) {
     violations.push({
       ruleId,
@@ -17,28 +20,59 @@ function findAll(text: string, pattern: RegExp, ruleId: string): Violation[] {
 }
 
 const INTENSIFIERS = [
-  'crucial', 'vital', 'robust', 'comprehensive', 'fundamental',
-  'arguably', 'straightforward', 'noteworthy', 'realm', 'landscape',
-  'tapestry', 'multifaceted', 'nuanced', 'pivotal',
-  'unprecedented', 'paradigm', 'synergy',
-  'holistic', 'transformative', 'cutting-edge', 'innovative', 'dynamic',
+  'crucial',
+  'vital',
+  'robust',
+  'comprehensive',
+  'fundamental',
+  'arguably',
+  'straightforward',
+  'noteworthy',
+  'realm',
+  'landscape',
+  'tapestry',
+  'multifaceted',
+  'nuanced',
+  'pivotal',
+  'unprecedented',
+  'paradigm',
+  'synergy',
+  'holistic',
+  'transformative',
+  'cutting-edge',
+  'innovative',
+  'dynamic',
   // From "words to watch" list
-  'enduring', 'interplay', 'intricate', 'intricacies',
-  'meticulous', 'meticulously', 'valuable', 'vibrant',
+  'enduring',
+  'interplay',
+  'intricate',
+  'intricacies',
+  'meticulous',
+  'meticulously',
+  'valuable',
+  'vibrant',
 ]
 
 // Multi-word phrases that are overused LLM clichés
-const INTENSIFIER_PHRASES = [
-  'align with',
-  'testament to',
-]
+const INTENSIFIER_PHRASES = ['align with', 'testament to']
 
 // Verb-type intensifiers — moved to NLP detector so deletion is replaced
 // with a correctly-conjugated simpler synonym (deleting a verb breaks the sentence)
 export const VERB_INTENSIFIERS = [
-  'leverage', 'delve', 'navigate', 'foster', 'underscore', 'resonate',
-  'embark', 'streamline', 'spearhead', 'harness',
-  'bolster', 'emphasize', 'enhance', 'garner',
+  'leverage',
+  'delve',
+  'navigate',
+  'foster',
+  'underscore',
+  'resonate',
+  'embark',
+  'streamline',
+  'spearhead',
+  'harness',
+  'bolster',
+  'emphasize',
+  'enhance',
+  'garner',
 ]
 
 const ELEVATED_REGISTER: [string, string | null][] = [
@@ -59,7 +93,7 @@ const ELEVATED_REGISTER: [string, string | null][] = [
   ['pertaining to', 'about'],
   ['in regards to', 'about'],
   ['with regards to', 'about'],
-  ['in the context of', null],  // replacement is too context-dependent to automate
+  ['in the context of', null], // replacement is too context-dependent to automate
   ['at this juncture', 'now'],
   ['going forward', 'in future'],
   ['moving forward', 'in future'],
@@ -72,63 +106,155 @@ const ELEVATED_REGISTER: [string, string | null][] = [
 ]
 
 const FILLER_ADVERBS = [
-  'importantly', 'essentially', 'fundamentally', 'ultimately',
-  'inherently', 'particularly', 'increasingly', 'certainly',
-  'undoubtedly', 'obviously', 'clearly', 'simply', 'basically',
-  'quite', 'very', 'really', 'truly', 'genuinely',
-  'quietly', 'deeply', 'remarkably',
+  'importantly',
+  'essentially',
+  'fundamentally',
+  'ultimately',
+  'inherently',
+  'particularly',
+  'increasingly',
+  'certainly',
+  'undoubtedly',
+  'obviously',
+  'clearly',
+  'simply',
+  'basically',
+  'quite',
+  'very',
+  'really',
+  'truly',
+  'genuinely',
+  'quietly',
+  'deeply',
+  'remarkably',
 ]
 
 const METAPHOR_CRUTCHES = [
-  'double-edged sword', 'tip of the iceberg', 'north star',
-  'building blocks', 'elephant in the room', 'perfect storm',
-  'game.changer', 'game changer', 'low.hanging fruit', 'low hanging fruit',
-  'move the needle', 'think outside the box', 'at the end of the day',
-  'paradigm shift', 'silver bullet', 'boiling the ocean',
-  'drinking the kool.aid', 'drinking the kool aid',
-  'put it on the back burner', 'circle back', 'deep dive',
-  'level up', 'hit the ground running', 'move fast and break things',
-  'the devil is in the details', 'on the same page',
-  'reinvent the wheel', 'touch base', 'bandwidth',
-  'bleeding edge', 'best of breed', 'boil down',
+  'double-edged sword',
+  'tip of the iceberg',
+  'north star',
+  'building blocks',
+  'elephant in the room',
+  'perfect storm',
+  'game.changer',
+  'game changer',
+  'low.hanging fruit',
+  'low hanging fruit',
+  'move the needle',
+  'think outside the box',
+  'at the end of the day',
+  'paradigm shift',
+  'silver bullet',
+  'boiling the ocean',
+  'drinking the kool.aid',
+  'drinking the kool aid',
+  'put it on the back burner',
+  'circle back',
+  'deep dive',
+  'level up',
+  'hit the ground running',
+  'move fast and break things',
+  'the devil is in the details',
+  'on the same page',
+  'reinvent the wheel',
+  'touch base',
+  'bandwidth',
+  'bleeding edge',
+  'best of breed',
+  'boil down',
 ]
 
 const FALSE_CONCLUSION_PHRASES = [
-  'in conclusion', 'to conclude', 'in summary', 'to summarize',
-  'to sum up', 'in closing', 'overall,', 'all in all',
-  'at the end of the day', 'when all is said and done',
-  'taking everything into account', 'taking everything into consideration',
-  'all things considered', 'moving forward', 'going forward',
+  'in conclusion',
+  'to conclude',
+  'in summary',
+  'to summarize',
+  'to sum up',
+  'in closing',
+  'overall,',
+  'all in all',
+  'at the end of the day',
+  'when all is said and done',
+  'taking everything into account',
+  'taking everything into consideration',
+  'all things considered',
+  'moving forward',
+  'going forward',
 ]
 
 const CONNECTOR_WORDS = [
-  'furthermore', 'moreover', 'additionally', 'however', 'nevertheless',
-  'nonetheless', 'consequently', 'therefore', 'thus', 'hence',
-  'in addition', 'as a result', 'for instance', 'for example',
-  'in contrast', 'on the other hand', 'on the contrary', 'that said',
-  'having said that', 'with that in mind', 'it follows that',
-  'interestingly', 'notably', 'significantly',
+  'furthermore',
+  'moreover',
+  'additionally',
+  'however',
+  'nevertheless',
+  'nonetheless',
+  'consequently',
+  'therefore',
+  'thus',
+  'hence',
+  'in addition',
+  'as a result',
+  'for instance',
+  'for example',
+  'in contrast',
+  'on the other hand',
+  'on the contrary',
+  'that said',
+  'having said that',
+  'with that in mind',
+  'it follows that',
+  'interestingly',
+  'notably',
+  'significantly',
 ]
 
 const UNNECESSARY_CONTRAST_PHRASES = [
-  'whereas', 'as opposed to', 'unlike', 'in contrast to',
-  'contrary to', 'conversely',
+  'whereas',
+  'as opposed to',
+  'unlike',
+  'in contrast to',
+  'contrary to',
+  'conversely',
 ]
 
 const HEDGE_WORDS = [
-  'perhaps', 'arguably', 'seemingly', 'apparently', 'ostensibly',
-  'possibly', 'potentially', 'conceivably', 'presumably', 'supposedly',
-  'it could be argued', 'it might be', 'it may be', 'it seems',
-  'it appears', 'one might', 'some would say', 'in some ways',
-  'to some extent', 'in a sense', 'sort of',
+  'perhaps',
+  'arguably',
+  'seemingly',
+  'apparently',
+  'ostensibly',
+  'possibly',
+  'potentially',
+  'conceivably',
+  'presumably',
+  'supposedly',
+  'it could be argued',
+  'it might be',
+  'it may be',
+  'it seems',
+  'it appears',
+  'one might',
+  'some would say',
+  'in some ways',
+  'to some extent',
+  'in a sense',
+  'sort of',
   // "kind of" only as a filler qualifier, not as a classifier ("a kind of X")
-  'is kind of', 'are kind of', 'was kind of', 'were kind of',
-  'feels kind of', 'seems kind of', 'sounds kind of', 'looks kind of',
+  'is kind of',
+  'are kind of',
+  'was kind of',
+  'were kind of',
+  'feels kind of',
+  'seems kind of',
+  'sounds kind of',
+  'looks kind of',
 ]
 
 // Abstract nouns that follow "highlight(s/ed/ing) the" in LLM slop constructions.
 // Literal uses ("highlights the text", "highlights them") are excluded by this list.
-const HIGHLIGHT_ABSTRACT_NOUNS = /^(importance|need|significance|value|role|impact|fact|challenges?|complexity|potential|limitations?|urgency|gaps?|contrast|tensions?|reality|severity|concern|problems?|issues?|difficulty|difficulties|dangers?|failures?|successes?|inequalit(?:y|ies)|disparit(?:y|ies)|tradeoffs?)$/i
+const HIGHLIGHT_ABSTRACT_NOUNS =
+  /^(importance|need|significance|value|role|impact|fact|challenges?|complexity|potential|limitations?|urgency|gaps?|contrast|tensions?|reality|severity|concern|problems?|issues?|difficulty|difficulties|dangers?|failures?|successes?|inequalit(?:y|ies)|disparit(?:y|ies)|tradeoffs?)$/i
 
 export function detectHighlightSlop(text: string): Violation[] {
   const violations: Violation[] = []
@@ -162,7 +288,13 @@ export function detectOverusedIntensifiers(text: string): Violation[] {
   }
   for (const phrase of INTENSIFIER_PHRASES) {
     const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    violations.push(...findAll(text, new RegExp(`\\b${escaped}\\b`, 'gi'), 'overused-intensifiers'))
+    violations.push(
+      ...findAll(
+        text,
+        new RegExp(`\\b${escaped}\\b`, 'gi'),
+        'overused-intensifiers',
+      ),
+    )
   }
   return violations
 }
@@ -179,7 +311,7 @@ export function detectElevatedRegister(text: string): Violation[] {
         startIndex: m.index,
         endIndex: m.index + m[0].length,
         matchedText: m[0],
-        suggestedChange: replacement === null ? null : (replacement || undefined),
+        suggestedChange: replacement === null ? null : replacement || undefined,
       })
     }
   }
@@ -198,7 +330,8 @@ export function detectFillerAdverbs(text: string): Violation[] {
 }
 
 export function detectAlmostHedge(text: string): Violation[] {
-  const re = /\balmost\s+(always|never|certainly|exclusively|entirely|completely|always|invariably|universally)\b/gi
+  const re =
+    /\balmost\s+(always|never|certainly|exclusively|entirely|completely|always|invariably|universally)\b/gi
   return findAll(text, re, 'almost-hedge')
 }
 
@@ -210,7 +343,9 @@ export function detectEraOpener(text: string): Violation[] {
 export function detectMetaphorCrutch(text: string): Violation[] {
   const violations: Violation[] = []
   for (const phrase of METAPHOR_CRUTCHES) {
-    const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\./g, '[- ]?')
+    const escaped = phrase
+      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      .replace(/\\\./g, '[- ]?')
     const re = new RegExp(`\\b${escaped}\\b`, 'gi')
     violations.push(...findAll(text, re, 'metaphor-crutch'))
   }
@@ -218,12 +353,14 @@ export function detectMetaphorCrutch(text: string): Violation[] {
 }
 
 export function detectImportantToNote(text: string): Violation[] {
-  const re = /\b(it('s| is)\s+important\s+to\s+note|it('s| is)\s+worth\s+noting|notably|note\s+that|it\s+should\s+be\s+noted)\b/gi
+  const re =
+    /\b(it('s| is)\s+important\s+to\s+note|it('s| is)\s+worth\s+noting|notably|note\s+that|it\s+should\s+be\s+noted)\b/gi
   return findAll(text, re, 'important-to-note')
 }
 
 export function detectBroaderImplications(text: string): Violation[] {
-  const re = /\b(broader\s+implications?|wider\s+implications?|implications?\s+(for|of|on)\s+the\s+(broader|wider|larger))\b/gi
+  const re =
+    /\b(broader\s+implications?|wider\s+implications?|implications?\s+(for|of|on)\s+the\s+(broader|wider|larger))\b/gi
   return findAll(text, re, 'broader-implications')
 }
 
@@ -249,7 +386,7 @@ export function detectConnectorAddiction(text: string): Violation[] {
     const re = new RegExp(`(^|\\n\\s*|[.!?]\\s+)(${escaped}[,\\s]+)(\\w)`, 'gi')
     let m: RegExpExecArray | null
     while ((m = re.exec(text)) !== null) {
-      const [fullMatch, boundary, connector, nextChar] = m
+      const [_fullMatch, boundary, connector, _nextChar] = m
       const highlightStart = m.index + boundary.length
       const highlightEnd = highlightStart + connector.trimEnd().length
       violations.push({
@@ -300,12 +437,19 @@ export function detectNegationPivot(text: string): Violation[] {
   const violations: Violation[] = []
   const NEGATIONS = `not|don[\u2019']?t|doesn[\u2019']?t|isn[\u2019']?t|wasn[\u2019']?t|aren[\u2019']?t|do not|does not|is not|was not|never|no longer`
   // "not X, but Y" / "not X but Y" (comma optional)
-  const commaButRe = new RegExp(`\\b(${NEGATIONS})\\b[^.!?\\n]{3,80},?\\s+but\\b`, 'gi')
+  const commaButRe = new RegExp(
+    `\\b(${NEGATIONS})\\b[^.!?\\n]{3,80},?\\s+but\\b`,
+    'gi',
+  )
   // "not X—Y" or "not X–Y" (em/en-dash pivot without "but") — capture one word after dash for clarity
-  const emDashRe = new RegExp(`\\b(${NEGATIONS})\\b[^.!?\\n\u2014\u2013]{3,60}[\u2014\u2013]\\s*\\w+`, 'gi')
+  const emDashRe = new RegExp(
+    `\\b(${NEGATIONS})\\b[^.!?\\n\u2014\u2013]{3,60}[\u2014\u2013]\\s*\\w+`,
+    'gi',
+  )
   // "X rather than Y" — preference framing used to show nuance; LLM rhetorical staple
   // Require 2+ words on each side to avoid short natural contrasts ("walk rather than run")
-  const ratherThanRe = /\b\w+(?:\s+\w+){1,6}\s+rather\s+than\s+\w+(?:\s+\w+){1,5}/gi
+  const ratherThanRe =
+    /\b\w+(?:\s+\w+){1,6}\s+rather\s+than\s+\w+(?:\s+\w+){1,5}/gi
   let m: RegExpExecArray | null
   while ((m = ratherThanRe.exec(text)) !== null) {
     violations.push({
@@ -329,7 +473,7 @@ export function detectNegationPivot(text: string): Violation[] {
   // "not X; Y" — negation in the first semicolon clause is the structural tell
   const semicolonPivotRe = new RegExp(
     `\\b(${NEGATIONS})\\b[^;.!?\\n]{3,80};`,
-    'gi'
+    'gi',
   )
   while ((m = semicolonPivotRe.exec(text)) !== null) {
     violations.push({
@@ -342,7 +486,8 @@ export function detectNegationPivot(text: string): Violation[] {
 
   // "X, not a Y" / "X, not for Y" — trailing negation after a positive claim.
   // Requires an article or preposition after "not" to avoid flagging natural adjective contrasts ("fast, not slow").
-  const trailingNotRe = /,\s+not\s+(?:just\s+|merely\s+|simply\s+)?(?:(?:a|an|the)|(?:for|in|by|with|to|about|on|of))\s+\w+(?:\s+\w+){0,3}/gi
+  const trailingNotRe =
+    /,\s+not\s+(?:just\s+|merely\s+|simply\s+)?(?:(?:a|an|the)|(?:for|in|by|with|to|about|on|of))\s+\w+(?:\s+\w+){0,3}/gi
   while ((m = trailingNotRe.exec(text)) !== null) {
     violations.push({
       ruleId: 'negation-pivot',
@@ -357,7 +502,7 @@ export function detectNegationPivot(text: string): Violation[] {
   const NEG = `(?:doesn[\u2019']?t|isn[\u2019']?t|won[\u2019']?t|can[\u2019']?t|don[\u2019']?t|does\\s+not|is\\s+not|was\\s+not|did\\s+not|will\\s+not)`
   const twoSentenceRe = new RegExp(
     `(([A-Z][\\w\u2019']*)\\s+${NEG}\\b[^.!?\\n]{5,120}[.!?])[ \\t]+(\\2\\b[^.!?\\n]{5,120}[.!?])`,
-    'g'
+    'g',
   )
   while ((m = twoSentenceRe.exec(text)) !== null) {
     violations.push({
@@ -389,9 +534,17 @@ export function detectColonElaboration(text: string): Violation[] {
 }
 
 const COMMA_QUALIFIERS = [
-  'of course', 'to be fair', 'it should be said', 'needless to say',
-  'in fairness', 'admittedly', 'to be sure', 'it must be said',
-  'after all', 'as we know', 'as everyone knows',
+  'of course',
+  'to be fair',
+  'it should be said',
+  'needless to say',
+  'in fairness',
+  'admittedly',
+  'to be sure',
+  'it must be said',
+  'after all',
+  'as we know',
+  'as everyone knows',
 ]
 
 export function detectParentheticalQualifier(text: string): Violation[] {
@@ -483,7 +636,8 @@ export function detectStaccatoBurst(text: string): Violation[] {
       offset += s.length
     }
 
-    const wordCount = (s: string) => s.trim().split(/\s+/).filter(Boolean).length
+    const wordCount = (s: string) =>
+      s.trim().split(/\s+/).filter(Boolean).length
     let i = 0
     while (i < sentences.length) {
       if (wordCount(sentences[i]) <= 8) {
@@ -515,11 +669,15 @@ export function detectListicleInstinct(text: string): Violation[] {
   const MAGIC_COUNTS = new Set([3, 5, 7, 10])
 
   // Numbered lists
-  const numberedListRe = /(?:^|\n)(\s*\d+[.)]\s+[^\n]+)(\n\s*\d+[.)]\s+[^\n]+){2,}/gm
+  const numberedListRe =
+    /(?:^|\n)(\s*\d+[.)]\s+[^\n]+)(\n\s*\d+[.)]\s+[^\n]+){2,}/gm
   let m: RegExpExecArray | null
   const re1 = new RegExp(numberedListRe.source, 'gm')
   while ((m = re1.exec(text)) !== null) {
-    const items = m[0].trim().split('\n').filter(l => /^\s*\d+[.)]\s/.test(l))
+    const items = m[0]
+      .trim()
+      .split('\n')
+      .filter((l) => /^\s*\d+[.)]\s/.test(l))
     if (MAGIC_COUNTS.has(items.length)) {
       violations.push({
         ruleId: 'listicle-instinct',
@@ -535,7 +693,10 @@ export function detectListicleInstinct(text: string): Violation[] {
   const bulletRe = /(?:^|\n)(\s*[-*•]\s+[^\n]+)(\n\s*[-*•]\s+[^\n]+){2,}/gm
   const re2 = new RegExp(bulletRe.source, 'gm')
   while ((m = re2.exec(text)) !== null) {
-    const items = m[0].trim().split('\n').filter(l => /^\s*[-*•]\s/.test(l))
+    const items = m[0]
+      .trim()
+      .split('\n')
+      .filter((l) => /^\s*[-*•]\s/.test(l))
     if (MAGIC_COUNTS.has(items.length)) {
       violations.push({
         ruleId: 'listicle-instinct',
@@ -550,7 +711,9 @@ export function detectListicleInstinct(text: string): Violation[] {
   return violations
 }
 
-export function splitParagraphs(text: string): Array<{ text: string; start: number }> {
+export function splitParagraphs(
+  text: string,
+): Array<{ text: string; start: number }> {
   const results: Array<{ text: string; start: number }> = []
   const re = /\n\s*\n/g
   let last = 0
@@ -577,7 +740,7 @@ function splitSentences(text: string): string[] {
     last = m.index + m[0].length
   }
   if (last < text.length) results.push(text.slice(last))
-  return results.filter(s => s.trim().length > 0)
+  return results.filter((s) => s.trim().length > 0)
 }
 
 // ── New detectors ─────────────────────────────────────────────────────────
@@ -592,18 +755,28 @@ export function detectNegationCountdown(text: string): Violation[] {
   const sentences = splitSentences(text)
   let offset = 0
   const offsets: number[] = []
-  for (const s of sentences) { offsets.push(offset); offset += s.length }
+  for (const s of sentences) {
+    offsets.push(offset)
+    offset += s.length
+  }
 
   let i = 0
   while (i < sentences.length) {
     if (/^\s*not\s+/i.test(sentences[i].trim())) {
       let j = i + 1
-      while (j < sentences.length && /^\s*not\s+/i.test(sentences[j].trim())) j++
+      while (j < sentences.length && /^\s*not\s+/i.test(sentences[j].trim()))
+        j++
       if (j - i >= 2) {
         const start = offsets[i]
         const end = offsets[j - 1] + sentences[j - 1].length
-        violations.push({ ruleId: 'negation-countdown', startIndex: start, endIndex: end, matchedText: text.slice(start, end) })
-        i = j; continue
+        violations.push({
+          ruleId: 'negation-countdown',
+          startIndex: start,
+          endIndex: end,
+          matchedText: text.slice(start, end),
+        })
+        i = j
+        continue
       }
     }
     i++
@@ -613,9 +786,22 @@ export function detectNegationCountdown(text: string): Violation[] {
 
 // Function words too generic to flag as anaphora — anything else repeated 3+ times is suspicious
 const ANAPHORA_SINGLE_WORD_SKIP = new Set([
-  'a', 'an', 'the',
-  'in', 'on', 'at', 'to', 'of', 'for', 'with', 'by', 'from',
-  'is', 'are', 'was', 'were',
+  'a',
+  'an',
+  'the',
+  'in',
+  'on',
+  'at',
+  'to',
+  'of',
+  'for',
+  'with',
+  'by',
+  'from',
+  'is',
+  'are',
+  'was',
+  'were',
 ])
 
 export function detectAnaphoraAbuse(text: string): Violation[] {
@@ -623,14 +809,20 @@ export function detectAnaphoraAbuse(text: string): Violation[] {
   const sentences = splitSentences(text)
   let offset = 0
   const offsets: number[] = []
-  for (const s of sentences) { offsets.push(offset); offset += s.length }
+  for (const s of sentences) {
+    offsets.push(offset)
+    offset += s.length
+  }
 
   const CONJUNCTIONS = new Set(['and', 'but', 'or'])
 
   function normalize(s: string): string[] {
     const words = s.trim().split(/\s+/).filter(Boolean)
     // Strip a leading conjunction ("And both..." → ["both", ...])
-    if (words.length > 1 && CONJUNCTIONS.has(words[0].toLowerCase().replace(/[^a-z]/g, ''))) {
+    if (
+      words.length > 1 &&
+      CONJUNCTIONS.has(words[0].toLowerCase().replace(/[^a-z]/g, ''))
+    ) {
       return words.slice(1)
     }
     return words
@@ -640,7 +832,24 @@ export function detectAnaphoraAbuse(text: string): Violation[] {
     const words = normalize(s)
     if (words.length < 2) return ''
     const first = words[0].toLowerCase().replace(/[^a-z]/g, '')
-    const skip = new Set(['the', 'a', 'an', 'it', 'is', 'in', 'on', 'at', 'to', 'of', 'and', 'but', 'i', 'we', 'he', 'she'])
+    const skip = new Set([
+      'the',
+      'a',
+      'an',
+      'it',
+      'is',
+      'in',
+      'on',
+      'at',
+      'to',
+      'of',
+      'and',
+      'but',
+      'i',
+      'we',
+      'he',
+      'she',
+    ])
     if (skip.has(first) || first.length < 2) return ''
     return `${first} ${words[1].toLowerCase().replace(/[^a-z]/g, '')}`
   }
@@ -657,8 +866,11 @@ export function detectAnaphoraAbuse(text: string): Violation[] {
     const start = offsets[i]
     const end = offsets[j - 1] + sentences[j - 1].length
     violations.push({
-      ruleId: 'anaphora-abuse', startIndex: start, endIndex: end,
-      matchedText: text.slice(start, end), explanation: `"${opener}..." repeated ${j - i} times`,
+      ruleId: 'anaphora-abuse',
+      startIndex: start,
+      endIndex: end,
+      matchedText: text.slice(start, end),
+      explanation: `"${opener}..." repeated ${j - i} times`,
     })
   }
 
@@ -669,14 +881,22 @@ export function detectAnaphoraAbuse(text: string): Violation[] {
     if (two) {
       let j = i + 1
       while (j < sentences.length && twoWordOpener(sentences[j]) === two) j++
-      if (j - i >= 3) { flagRun(i, j, two); i = j; continue }
+      if (j - i >= 3) {
+        flagRun(i, j, two)
+        i = j
+        continue
+      }
     }
     // Single-word opener from curated slop-indicative list
     const one = singleWordOpener(sentences[i])
     if (one) {
       let j = i + 1
       while (j < sentences.length && singleWordOpener(sentences[j]) === one) j++
-      if (j - i >= 3) { flagRun(i, j, one); i = j; continue }
+      if (j - i >= 3) {
+        flagRun(i, j, one)
+        i = j
+        continue
+      }
     }
     i++
   }
@@ -688,7 +908,10 @@ export function detectGerundLitany(text: string): Violation[] {
   const sentences = splitSentences(text)
   let offset = 0
   const offsets: number[] = []
-  for (const s of sentences) { offsets.push(offset); offset += s.length }
+  for (const s of sentences) {
+    offsets.push(offset)
+    offset += s.length
+  }
 
   const isGerund = (s: string) => {
     const trimmed = s.trim()
@@ -704,8 +927,14 @@ export function detectGerundLitany(text: string): Violation[] {
       if (j - i >= 2) {
         const start = offsets[i]
         const end = offsets[j - 1] + sentences[j - 1].length
-        violations.push({ ruleId: 'gerund-litany', startIndex: start, endIndex: end, matchedText: text.slice(start, end) })
-        i = j; continue
+        violations.push({
+          ruleId: 'gerund-litany',
+          startIndex: start,
+          endIndex: end,
+          matchedText: text.slice(start, end),
+        })
+        i = j
+        continue
       }
     }
     i++
@@ -745,9 +974,9 @@ const PEDAGOGICAL_PHRASES = [
   "let's explore",
   "let's dive in",
   "let's examine",
-  "think of it as",
-  "think of it like",
-  "think of this as",
+  'think of it as',
+  'think of it like',
+  'think of this as',
 ]
 
 export function detectPedagogicalAside(text: string): Violation[] {
@@ -791,10 +1020,23 @@ export function detectListicleTrenchCoat(text: string): Violation[] {
 }
 
 const VAGUE_ATTRIBUTION_PHRASES = [
-  'experts argue', 'experts say', 'experts suggest', 'experts believe', 'experts note',
-  'industry analysts', 'observers have noted', 'observers have cited', 'observers argue',
-  'analysts note', 'analysts suggest', 'many experts', 'several experts', 'some experts',
-  'according to experts', 'studies show', 'research suggests',
+  'experts argue',
+  'experts say',
+  'experts suggest',
+  'experts believe',
+  'experts note',
+  'industry analysts',
+  'observers have noted',
+  'observers have cited',
+  'observers argue',
+  'analysts note',
+  'analysts suggest',
+  'many experts',
+  'several experts',
+  'some experts',
+  'according to experts',
+  'studies show',
+  'research suggests',
 ]
 
 export function detectVagueAttribution(text: string): Violation[] {
@@ -825,7 +1067,8 @@ export function detectUnicodeArrows(text: string): Violation[] {
 }
 
 export function detectDespiteChallenges(text: string): Violation[] {
-  const re = /\bDespite (these|its|the|their|all|such)\b[^.!?]{0,80}\b(challenge|obstacle|limitation|difficult|drawback|shortcoming)/gi
+  const re =
+    /\bDespite (these|its|the|their|all|such)\b[^.!?]{0,80}\b(challenge|obstacle|limitation|difficult|drawback|shortcoming)/gi
   return findAll(text, re, 'despite-challenges')
 }
 
@@ -844,7 +1087,9 @@ export function detectDramaticFragment(text: string): Violation[] {
       // or all significant words are capitalised (section headings)
       const hasTerminalPunct = /[.!?]/.test(trimmed)
       const isFirstPara = text.slice(0, para.start).trim() === ''
-      const allWordsCapped = trimmed.split(/\s+/).every(w => /^[A-Z0-9\-–—"''""\[]/.test(w))
+      const allWordsCapped = trimmed
+        .split(/\s+/)
+        .every((w) => /^[A-Z0-9\-–—"''""[]/.test(w))
       if (!hasTerminalPunct && (isFirstPara || allWordsCapped)) continue
       violations.push({
         ruleId: 'dramatic-fragment',
@@ -858,7 +1103,8 @@ export function detectDramaticFragment(text: string): Violation[] {
 }
 
 export function detectSuperficialAnalysis(text: string): Violation[] {
-  const re = /,\s+(highlighting|underscoring|showcasing|reflecting|cementing|embodying|encapsulating)\s+(its|the|their|this)\s+(importance|role|significance|legacy|power|spirit|nature|value)\b/gi
+  const re =
+    /,\s+(highlighting|underscoring|showcasing|reflecting|cementing|embodying|encapsulating)\s+(its|the|their|this)\s+(importance|role|significance|legacy|power|spirit|nature|value)\b/gi
   return findAll(text, re, 'superficial-analysis')
 }
 
