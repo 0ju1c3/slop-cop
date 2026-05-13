@@ -24,6 +24,8 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "compromise": "^14.15.0",
+    "retext": "^9.0.0",
+    "retext-indefinite-article": "^5.0.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
