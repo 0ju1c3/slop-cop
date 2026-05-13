@@ -2,21 +2,6 @@
   "name": "@0ju1c3/slop-cop",
   "version": "1.0.0",
   "description": "MCP server that detects and fixes LLM prose patterns (slop) in text",
-  "type": "module",
-  "main": "index.js",
-  "scripts": {
-    "build": "tsc && chmod 755 build/index.js",
-    "format": "biome format --write src/",
-    "lint": "biome lint src/",
-    "check": "biome check src/"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/0ju1c3/slop-cop.git"
-  },
-  "files": [
-    "build"
-  ],
   "keywords": [
     "mcp",
     "llm",
@@ -26,12 +11,27 @@
     "ai-detection",
     "anthropic"
   ],
-  "author": "0ju1c3",
-  "license": "MIT",
+  "homepage": "https://github.com/0ju1c3/slop-cop#readme",
   "bugs": {
     "url": "https://github.com/0ju1c3/slop-cop/issues"
   },
-  "homepage": "https://github.com/0ju1c3/slop-cop#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0ju1c3/slop-cop.git"
+  },
+  "license": "MIT",
+  "author": "0ju1c3",
+  "type": "module",
+  "main": "index.js",
+  "files": [
+    "build"
+  ],
+  "scripts": {
+    "build": "tsc && chmod 755 build/index.js",
+    "format": "biome format --write src/",
+    "lint": "biome lint src/",
+    "check": "biome check src/"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "compromise": "^14.15.0",
