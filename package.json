@@ -1,6 +1,6 @@
 {
   "name": "@0ju1c3/slop-cop",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "MCP server that detects and fixes LLM prose patterns (slop) in text",
   "keywords": [
     "mcp",
@@ -22,7 +22,10 @@
   "license": "MIT",
   "author": "0ju1c3",
   "type": "module",
-  "main": "index.js",
+  "main": "build/index.js",
+  "bin": {
+    "slop-cop": "build/index.js"
+  },
   "files": [
     "build"
   ],
