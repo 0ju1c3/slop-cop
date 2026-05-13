@@ -68,7 +68,6 @@ function splitParagraphs(text) {
 //   4. ~/.claude/.credentials.json   (zero-config on Linux/Windows)
 // Returns { token, header } or null if nothing found.
 function resolveClaudeAuth() {
-    // Env var overrides (Bearer)
     const bearer = process.env.ANTHROPIC_AUTH_TOKEN ?? process.env.CLAUDE_CODE_OAUTH_TOKEN;
     if (bearer)
         return { token: bearer, header: 'bearer' };
@@ -246,7 +245,7 @@ server.registerTool('fix_slop', {
                 v.suggestedChange +
                 fixed.slice(v.endIndex);
     }
-    // Clean up splice artifacts: collapse double spaces, trim space before punctuation
+    // Clean up splice artifacts
     fixed = fixed.replace(/[ \t]{2,}/g, ' ').replace(/ ([.,;:!?])/g, '$1');
     // ── Phase 2: LLM rewrite for what remains ────────────────────────────────
     // Re-detect on the spliced text (positions are fresh). Only violations with
