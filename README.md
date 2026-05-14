@@ -11,10 +11,8 @@ Built on the detection engine and browser app [slop-cop](https://awnist.com/slop
 ### Claude Code
 
 ```bash
-claude mcp add slop-cop -- npx -y @0ju1c3/slop-cop
+claude mcp add slop-cop -- npx -y @0ju1c3/slop-cop@latest
 ```
-
-That's it. No API key needed — uses your existing Claude Code login.
 
 ### Claude Desktop
 
@@ -25,7 +23,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
   "mcpServers": {
     "slop-cop": {
       "command": "npx",
-      "args": ["-y", "@0ju1c3/slop-cop"]
+      "args": ["-y", "@0ju1c3/slop-cop@latest"]
     }
   }
 }
@@ -36,27 +34,27 @@ Restart Claude Desktop after saving.
 ### Prerequisites
 
 - Node.js 18+
-- Logged in to Claude Code (`claude login`) **or** `ANTHROPIC_API_KEY` set in your environment
 
 ---
 
 ## Authentication
 
-No configuration required if you use Claude Code. The server reads your existing Claude Code credentials automatically:
+`detect_slop` runs entirely locally — no API key, no credentials.
 
-| Platform | Source |
-|---|---|
-| macOS | Keychain entry `"Claude Code-credentials"` |
-| Linux / Windows | `~/.claude/.credentials.json` |
+`fix_slop` and `detect_slop_full` call the Anthropic API and require `ANTHROPIC_API_KEY`. Add it to your MCP server env config:
 
-If you prefer an explicit API key, set `ANTHROPIC_API_KEY` in the MCP server environment:
+**Claude Code:**
+```bash
+claude mcp add slop-cop --env ANTHROPIC_API_KEY=sk-ant-... -- npx -y @0ju1c3/slop-cop@latest
+```
 
+**Claude Desktop / other hosts:**
 ```json
 {
   "mcpServers": {
     "slop-cop": {
       "command": "npx",
-      "args": ["-y", "@0ju1c3/slop-cop"],
+      "args": ["-y", "@0ju1c3/slop-cop@latest"],
       "env": { "ANTHROPIC_API_KEY": "sk-ant-..." }
     }
   }
@@ -165,7 +163,7 @@ Use detect_slop_full on the following draft: [paste text]
 
 ### Inline editing
 
-Ask Claude to run `fix_slop` on a specific paragraph you know sounds off. Phase 1 makes deterministic fixes; Phase 2 only fires if restructuring is genuinely needed.
+Ask Claude to run `fix_slop` on a specific paragraph you know sounds off. Phase 1 makes deterministic fixes; Phase 2 only fires if restructuring is needed.
 
 ---
 
@@ -234,19 +232,11 @@ Detection runs in two tiers:
 
 ### AI Detection Flow
 
-`detect_slop_full` and `fix_slop` call an LLM for semantic analysis and paragraph rewrites. The server tries two paths in order.
+`detect_slop_full` and `fix_slop` call an LLM in two steps:
 
-**MCP sampling first.** The server calls `sampling/createMessage`, which asks the MCP host to run a model on its behalf. This is part of the MCP spec. Neither Claude Code nor Claude Desktop implements it; both return `-32601: Method not found`. The code keeps the attempt for forward compatibility with compliant hosts.
+**MCP sampling first.** The server calls `sampling/createMessage`, asking the MCP host to run a model on its behalf. This is part of the MCP spec. Neither Claude Code nor Claude Desktop currently implements it; both return `-32601: Method not found`. The attempt is kept for forward compatibility with compliant hosts.
 
-**Direct Anthropic API as fallback.** When sampling fails, the server calls `https://api.anthropic.com/v1/messages` with `claude-haiku-4-5-20251001`, authenticating with Claude Code's stored OAuth token. No separate API key is required.
-
-Credentials are resolved in this order:
-1. `ANTHROPIC_AUTH_TOKEN` or `CLAUDE_CODE_OAUTH_TOKEN` env vars
-2. macOS Keychain: `"Claude Code-credentials"` entry, field `claudeAiOauth.accessToken`
-3. `~/.claude/.credentials.json` on Linux and Windows
-4. `ANTHROPIC_API_KEY` env var
-
-If none resolves, `detect_slop_full` and `fix_slop` return an error. `detect_slop` runs entirely locally and is not affected.
+**Direct Anthropic API as fallback.** When sampling fails, the server calls `https://api.anthropic.com/v1/messages` with `claude-haiku-4-5-20251001` using `ANTHROPIC_API_KEY`. If the key is not set, the tool returns a clear error.
 
 ---
 
