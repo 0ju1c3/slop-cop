@@ -1,8 +1,4 @@
 #!/usr/bin/env node
-import { execSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
@@ -62,40 +58,16 @@ function splitParagraphs(text) {
     }
     return paras;
 }
-// Precedence (mirrors Claude Code's own auth chain):
-//   1. ANTHROPIC_AUTH_TOKEN env var  (Bearer token — e.g. from `claude setup-token`)
-//   2. CLAUDE_CODE_OAUTH_TOKEN env var (same format, alternative var name)
-//   3. macOS Keychain "Claude Code-credentials" (zero-config on Mac)
-//   4. ~/.claude/.credentials.json   (zero-config on Linux/Windows)
-// Returns { token, header } or null if nothing found.
+// Auth precedence:
+//   1. ANTHROPIC_AUTH_TOKEN env var  (injected by Claude Code CLI, or `claude setup-token`)
+//   2. CLAUDE_CODE_OAUTH_TOKEN env var (alternative name for the same)
+//   3. ANTHROPIC_API_KEY env var (traditional API key)
+// Keychain/credentials-file OAuth tokens are intentionally not used — they are
+// claude.ai session tokens and are rejected by the public Anthropic API.
 function resolveClaudeAuth() {
     const bearer = process.env.ANTHROPIC_AUTH_TOKEN ?? process.env.CLAUDE_CODE_OAUTH_TOKEN;
     if (bearer)
         return { token: bearer, header: 'bearer' };
-    // macOS Keychain (zero-config)
-    if (process.platform === 'darwin') {
-        try {
-            const raw = execSync('security find-generic-password -s "Claude Code-credentials" -w', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
-            const token = JSON.parse(raw)?.claudeAiOauth?.accessToken;
-            if (token)
-                return { token, header: 'bearer' };
-        }
-        catch {
-            /* keychain unavailable or no entry */
-        }
-    }
-    // Linux / Windows credentials file (zero-config)
-    try {
-        const configDir = process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), '.claude');
-        const raw = readFileSync(join(configDir, '.credentials.json'), 'utf8');
-        const token = JSON.parse(raw)?.claudeAiOauth?.accessToken;
-        if (token)
-            return { token, header: 'bearer' };
-    }
-    catch {
-        /* file not present */
-    }
-    // Explicit API key (traditional)
     if (process.env.ANTHROPIC_API_KEY)
         return { token: process.env.ANTHROPIC_API_KEY, header: 'apikey' };
     return null;
@@ -153,6 +125,22 @@ async function sample(systemPrompt, userPrompt, maxTokens = 4096) {
     const block = data.content.find((b) => b.type === 'text');
     return block?.text ?? '';
 }
+server.registerTool('debug_auth', {
+    description: 'Debug: show which auth env vars are present (masked)',
+    inputSchema: {},
+}, async () => {
+    const mask = (s) => s ? `${s.slice(0, 12)}...${s.slice(-4)}` : 'not set';
+    return {
+        content: [{
+                type: 'text',
+                text: JSON.stringify({
+                    ANTHROPIC_AUTH_TOKEN: mask(process.env.ANTHROPIC_AUTH_TOKEN),
+                    CLAUDE_CODE_OAUTH_TOKEN: mask(process.env.CLAUDE_CODE_OAUTH_TOKEN),
+                    ANTHROPIC_API_KEY: mask(process.env.ANTHROPIC_API_KEY),
+                }, null, 2),
+            }],
+    };
+});
 server.registerTool('detect_slop', {
     description: 'Detect LLM prose patterns (slop) in text using fast regex and NLP detectors. Returns violations with matched text, rule name, category, and fix tip. Instant — no API call needed.',
     inputSchema: {

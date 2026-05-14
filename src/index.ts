@@ -1,8 +1,4 @@
 #!/usr/bin/env node
-import { execSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
-import { homedir } from 'node:os'
-import { join } from 'node:path'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
@@ -78,49 +74,14 @@ function splitParagraphs(
   return paras
 }
 
-// Precedence (mirrors Claude Code's own auth chain):
-//   1. ANTHROPIC_AUTH_TOKEN env var  (Bearer token — e.g. from `claude setup-token`)
-//   2. CLAUDE_CODE_OAUTH_TOKEN env var (same format, alternative var name)
-//   3. macOS Keychain "Claude Code-credentials" (zero-config on Mac)
-//   4. ~/.claude/.credentials.json   (zero-config on Linux/Windows)
-// Returns { token, header } or null if nothing found.
+// Returns ANTHROPIC_API_KEY if set, null otherwise.
+// Used as fallback when MCP sampling is unavailable.
 function resolveClaudeAuth(): {
   token: string
-  header: 'bearer' | 'apikey'
+  header: 'apikey'
 } | null {
-  const bearer =
-    process.env.ANTHROPIC_AUTH_TOKEN ?? process.env.CLAUDE_CODE_OAUTH_TOKEN
-  if (bearer) return { token: bearer, header: 'bearer' }
-
-  // macOS Keychain (zero-config)
-  if (process.platform === 'darwin') {
-    try {
-      const raw = execSync(
-        'security find-generic-password -s "Claude Code-credentials" -w',
-        { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] },
-      ).trim()
-      const token = JSON.parse(raw)?.claudeAiOauth?.accessToken
-      if (token) return { token, header: 'bearer' }
-    } catch {
-      /* keychain unavailable or no entry */
-    }
-  }
-
-  // Linux / Windows credentials file (zero-config)
-  try {
-    const configDir =
-      process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), '.claude')
-    const raw = readFileSync(join(configDir, '.credentials.json'), 'utf8')
-    const token = JSON.parse(raw)?.claudeAiOauth?.accessToken
-    if (token) return { token, header: 'bearer' }
-  } catch {
-    /* file not present */
-  }
-
-  // Explicit API key (traditional)
   if (process.env.ANTHROPIC_API_KEY)
     return { token: process.env.ANTHROPIC_API_KEY, header: 'apikey' }
-
   return null
 }
 
@@ -144,26 +105,20 @@ async function sample(
     // Host doesn't support sampling — fall through to direct API
   }
 
-  // 2. Direct Anthropic API using Claude Code's own credentials (zero config).
-  //    Auth precedence mirrors Claude Code's own chain:
-  //      ANTHROPIC_AUTH_TOKEN / CLAUDE_CODE_OAUTH_TOKEN env vars
-  //      → macOS Keychain "Claude Code-credentials"
-  //      → ~/.claude/.credentials.json  (Linux / Windows)
-  //      → ANTHROPIC_API_KEY env var
+  // 2. Fallback: direct Anthropic API using ANTHROPIC_API_KEY.
+  //    Set this in your MCP server env config to enable fix_slop and detect_slop_full.
   const auth = resolveClaudeAuth()
   if (!auth) {
     throw new Error(
-      'No credentials found. Ensure you are logged in to Claude Code (`claude login`), ' +
-        'or set ANTHROPIC_API_KEY in the MCP server env config.',
+      'MCP sampling is not supported by this host and ANTHROPIC_API_KEY is not set. ' +
+        'Add ANTHROPIC_API_KEY to your MCP server env config to use fix_slop and detect_slop_full.',
     )
   }
 
   const headers: Record<string, string> = {
     'content-type': 'application/json',
     'anthropic-version': '2023-06-01',
-    ...(auth.header === 'bearer'
-      ? { authorization: `Bearer ${auth.token}` }
-      : { 'x-api-key': auth.token }),
+    'x-api-key': auth.token,
   }
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
