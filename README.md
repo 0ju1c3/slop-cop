@@ -1,6 +1,6 @@
-# Slop Cop — MCP Server
+# Slop Cop - MCP Server
 
-An MCP server that detects and fixes LLM prose patterns in text. It exposes three tools to Claude Code, Claude Desktop, and any MCP-compatible host.
+An MCP server that detects and fixes LLM prose patterns in text. It exposes tools to Claude Code, Claude Desktop, and any MCP-compatible host.
 
 Built on the detection engine and browser app [slop-cop](https://awnist.com/slop-cop) by [awnist](https://github.com/awnist) that highlights these patterns in real time.
 
@@ -224,19 +224,19 @@ Dead Metaphor · One-Point Dilution · Fractal Summaries
 
 Detection runs in two tiers:
 
-**Client-side (36 rules):** Regex, structural analysis, and NLP via [compromise](https://github.com/spencermountain/compromise). Runs entirely locally, so it's instant, costs nothing, and makes no API calls.
+**Client-side (36 rules):** Regex, structural analysis, and NLP via [compromise](https://github.com/spencermountain/compromise). Runs entirely locally. It's instant, requires no API calls, and costs nothing.
 
 **Semantic (12 rules):** API call to `claude-haiku-4-5-20251001`. Only runs when you call `detect_slop_full` or when `fix_slop` needs to restructure a sentence that a direct splice can't fix.
 
-`fix_slop` uses a two-phase approach. It first applies all deterministic string splices at no cost, then calls the LLM only for violations that require sentence restructuring. Many texts are fully fixed in Phase 1 alone.
+`fix_slop` applies all deterministic string splices first, at no cost, then calls the LLM only for violations that require sentence restructuring. Many texts are fully fixed in Phase 1 alone.
 
 ### AI Detection Flow
 
 `detect_slop_full` and `fix_slop` call an LLM in two steps:
 
-**MCP sampling first.** The server calls `sampling/createMessage`, asking the MCP host to run a model on its behalf. This is part of the MCP spec. Neither Claude Code nor Claude Desktop currently implements it; both return `-32601: Method not found`. The attempt is kept for forward compatibility with compliant hosts.
+**MCP sampling first.** The server calls `sampling/createMessage` to ask the MCP host to run a model on its behalf, as the MCP spec defines. Claude Code and Claude Desktop don't currently implement this; both return `-32601: Method not found`. The attempt is kept for forward compatibility with compliant hosts.
 
-**Direct Anthropic API as fallback.** When sampling fails, the server calls `https://api.anthropic.com/v1/messages` with `claude-haiku-4-5-20251001` using `ANTHROPIC_API_KEY`. If the key is not set, the tool returns a clear error.
+**Direct Anthropic API as fallback.** When sampling fails, the server calls the Anthropic API directly with `claude-haiku-4-5-20251001` using `ANTHROPIC_API_KEY`. If the key is not set, the tool returns a clear error.
 
 ---
 
